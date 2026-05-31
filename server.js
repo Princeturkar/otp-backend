@@ -9,7 +9,10 @@ const app = express();
 
 const PORT = process.env.PORT || 5001;
 
-// CORS
+/* =========================
+   CORS
+========================= */
+
 app.use(cors({
   origin: [
     "http://localhost:5173",
@@ -40,8 +43,10 @@ app.post("/api/send-otp", async (req, res) => {
 
     console.log("OTP CODE:", otpCode);
 
-    await axios.post(
+    const response = await axios.post(
+
       "https://api.brevo.com/v3/smtp/email",
+
       {
         sender: {
           name: "Expense Tracker",
@@ -72,6 +77,9 @@ app.post("/api/send-otp", async (req, res) => {
         }
       }
     );
+
+    console.log("EMAIL SENT SUCCESSFULLY");
+    console.log("BREVO RESPONSE:", response.data);
 
     return res.status(200).json({
       success: true,
@@ -107,6 +115,7 @@ app.post("/api/create-order", async (req, res) => {
     ).toString("base64");
 
     const response = await axios.post(
+
       "https://api.razorpay.com/v1/orders",
 
       {
