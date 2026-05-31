@@ -1,7 +1,6 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -21,25 +20,16 @@ app.use(cors({
 
 app.use(express.json());
 
-// SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
-});
-// Send OTP
+/* =========================
+   SEND OTP
+========================= */
+
 app.post("/api/send-otp", async (req, res) => {
 
   const { email, otpCode } = req.body;
 
   if (!email || !otpCode) {
+
     return res.status(400).json({
       success: false,
       message: "Email and OTP are required"
@@ -50,18 +40,38 @@ app.post("/api/send-otp", async (req, res) => {
 
     console.log("OTP CODE:", otpCode);
 
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: "OTP Verification",
-      html: `
-        <div style="font-family: Arial; padding: 20px;">
-          <h2>Your OTP Code</h2>
-          <h1>${otpCode}</h1>
-          <p>This OTP is valid for 5 minutes.</p>
-        </div>
-      `
-    });
+    await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "Expense Tracker",
+          email: process.env.SMTP_USER
+        },
+
+        to: [
+          {
+            email: email
+          }
+        ],
+
+        subject: "OTP Verification",
+
+        htmlContent: `
+          <div style="font-family: Arial; padding: 20px;">
+            <h2>Your OTP Code</h2>
+            <h1>${otpCode}</h1>
+            <p>This OTP is valid for 5 minutes.</p>
+          </div>
+        `
+      },
+
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
     return res.status(200).json({
       success: true,
@@ -70,16 +80,22 @@ app.post("/api/send-otp", async (req, res) => {
 
   } catch (error) {
 
-  console.log("MAIL ERROR:", error);
+    console.log(
+      "MAIL ERROR:",
+      error.response?.data || error.message
+    );
 
-  return res.status(500).json({
-    success: false,
-    message: error.message
-  });
-}
-  });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send OTP"
+    });
+  }
+});
 
-// Razorpay Order
+/* =========================
+   RAZORPAY ORDER
+========================= */
+
 app.post("/api/create-order", async (req, res) => {
 
   const { amount } = req.body;
@@ -92,11 +108,13 @@ app.post("/api/create-order", async (req, res) => {
 
     const response = await axios.post(
       "https://api.razorpay.com/v1/orders",
+
       {
         amount: amount * 100,
         currency: "INR",
         receipt: `receipt_${Date.now()}`
       },
+
       {
         headers: {
           Authorization: `Basic ${auth}`,
@@ -112,7 +130,9 @@ app.post("/api/create-order", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error.response?.data || error.message);
+    console.log(
+      error.response?.data || error.message
+    );
 
     return res.status(500).json({
       success: false,
@@ -121,6 +141,13 @@ app.post("/api/create-order", async (req, res) => {
   }
 });
 
+/* =========================
+   START SERVER
+========================= */
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+  console.log(
+    `Server running on port ${PORT}`
+  );
 });
