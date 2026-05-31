@@ -48,6 +48,8 @@ app.post("/api/send-otp", async (req, res) => {
 
   try {
 
+    console.log("OTP CODE:", otpCode);
+
     await transporter.sendMail({
       from: process.env.SMTP_USER,
       to: email,
