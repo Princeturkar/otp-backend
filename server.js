@@ -23,7 +23,9 @@ app.use(express.json());
 
 // SMTP transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
@@ -64,14 +66,14 @@ app.post("/api/send-otp", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
+  console.log("MAIL ERROR:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to send OTP"
-    });
-  }
-});
+  return res.status(500).json({
+    success: false,
+    message: error.message
+  });
+}
+  });
 
 // Razorpay Order
 app.post("/api/create-order", async (req, res) => {
